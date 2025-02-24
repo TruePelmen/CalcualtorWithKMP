@@ -12,6 +12,7 @@ application {
 }
 
 dependencies {
+    implementation("io.ktor:ktor-client-cio")
     implementation(projects.shared)
     implementation(libs.logback)
     implementation(libs.ktor.server.core)

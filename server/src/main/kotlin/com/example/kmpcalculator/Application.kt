@@ -18,7 +18,9 @@ import io.ktor.serialization.kotlinx.json.*
 
 
 fun main() {
-    embeddedServer(Netty, port = SERVER_PORT, host = "0.0.0.0", module = Application::module)
+    embeddedServer(Netty, port = 8080, host = "0.0.0.0") {
+        module()
+    }
         .start(wait = true)
 }
 
@@ -32,10 +34,36 @@ fun Application.module() {
     }
 
     routing {
+        get("/"){
+            call.respondText { "Hello, dodik!" }
+        }
+        get("/test/{word}"){
+            val name = call.parameters["word"]
+            val header = call.request.headers["Connection"]
+            call.respondText { "Darov, $name, with header: $header" }
+        }
         post("/calculate") {
             val request = call.receive<CalculatorRequest>()
             val result = evaluateExpression(request.expression)
             call.respond(CalculatorResponse(result))
+        }
+        get("/calculate_get") {
+            val num1 = call.request.queryParameters["num1"]?.toDoubleOrNull()
+            val num2 = call.request.queryParameters["num2"]?.toDoubleOrNull()
+            val operator = call.request.queryParameters["operator"]
+
+            if (num1 == null || num2 == null || operator == null) {
+                call.respond(HttpStatusCode.BadRequest, "Invalid parameters")
+                return@get
+            }
+
+            val result = calculate(num1, num2, operator)
+            if (result != null) {
+                call.respond(HttpStatusCode.OK, mapOf("result" to result))
+
+            } else {
+                call.respond(HttpStatusCode.BadRequest, "Invalid operator or division by zero")
+            }
         }
     }
 }
@@ -46,6 +74,16 @@ fun evaluateExpression(expression: String): Double {
         (engine.eval(expression) as Number).toDouble()
     } catch (e: Exception) {
         Double.NaN
+    }
+}
+
+fun calculate(num1: Double, num2: Double, operator: String): Double? {
+    return when (operator) {
+        "+" -> num1 + num2
+        "-" -> num1 - num2
+        "*" -> num1 * num2
+        "/" -> if (num2 != 0.0) num1 / num2 else null
+        else -> null
     }
 }
 
